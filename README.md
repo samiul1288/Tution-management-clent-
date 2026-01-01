@@ -68,3 +68,17 @@ Users can interact with tuition-related data through an intuitive UI, ensuring s
 ### 1️⃣ Clone the repository
 ```bash
 git clone https://github.com/samiul1288/Tution-management-client.git
+
+2️⃣ Navigate to the project directory
+cd Tution-management-client
+
+3️⃣ Install dependencies
+npm install
+
+4️⃣ Run the project
+npm run dev
+
+
+If you are using Create React App, use:
+
+npm start
