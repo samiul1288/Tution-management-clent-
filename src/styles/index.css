@@ -1,4 +1,23 @@
 @import "tailwindcss";
 @plugin "daisyui";
+:root{
+  --primary: 16 185 129;
+  --secondary: 59 130 246;
+  --accent: 245 158 11;
+  --bg: 255 255 255;
+  --text: 15 23 42;
+  --card: 248 250 252;
+  --border: 226 232 240;
+}
+.dark{
+  --bg: 2 6 23;
+  --text: 226 232 240;
+  --card: 15 23 42;
+  --border: 51 65 85;
+}
 
+html, body {
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+}
 

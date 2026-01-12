@@ -1,5 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import useAxiosSecure from "../../../hooks/useAxiosSecure";
+
+const normalizeArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data; // {success, data:[]}
+  return [];
+};
 
 const MyTuitions = () => {
   const axiosSecure = useAxiosSecure();
@@ -17,8 +23,12 @@ const MyTuitions = () => {
     try {
       setError("");
       setLoading(true);
+
       const res = await axiosSecure.get("/tuitions/me");
-      setTuitions(res.data || []);
+
+      // ✅ ALWAYS array
+      const items = normalizeArray(res.data);
+      setTuitions(items);
     } catch (err) {
       console.error(err);
       const msg =
@@ -26,6 +36,7 @@ const MyTuitions = () => {
         err?.message ||
         "Failed to load tuitions.";
       setError(msg);
+      setTuitions([]); // ✅ safe fallback
     } finally {
       setLoading(false);
     }
@@ -41,7 +52,7 @@ const MyTuitions = () => {
 
     try {
       await axiosSecure.delete(`/tuitions/${id}`);
-      setTuitions((prev) => prev.filter((t) => t._id !== id));
+      setTuitions((prev) => normalizeArray(prev).filter((t) => t?._id !== id));
     } catch (err) {
       console.error(err);
       const msg =
@@ -52,14 +63,14 @@ const MyTuitions = () => {
 
   const openEditModal = (tuition) => {
     setEditing({
-      _id: tuition._id,
-      title: tuition.title ?? "",
-      subject: tuition.subject ?? "",
-      className: tuition.className ?? "",
-      location: tuition.location ?? "",
-      budget: tuition.budget ?? "",
-      schedule: tuition.schedule ?? "",
-      description: tuition.description ?? "",
+      _id: tuition?._id,
+      title: tuition?.title ?? "",
+      subject: tuition?.subject ?? "",
+      className: tuition?.className ?? "",
+      location: tuition?.location ?? "",
+      budget: tuition?.budget ?? "",
+      schedule: tuition?.schedule ?? "",
+      description: tuition?.description ?? "",
     });
     setOpenEdit(true);
     setError("");
@@ -90,9 +101,11 @@ const MyTuitions = () => {
 
       const res = await axiosSecure.patch(`/tuitions/${editing._id}`, payload);
 
-      const updated = res.data;
+      // updated could be object OR {data: object}
+      const updated = res?.data?.data || res?.data;
+
       setTuitions((prev) =>
-        prev.map((t) => (t._id === editing._id ? updated : t))
+        normalizeArray(prev).map((t) => (t?._id === editing._id ? updated : t))
       );
 
       setOpenEdit(false);
@@ -107,8 +120,17 @@ const MyTuitions = () => {
     }
   };
 
-  const approved = tuitions.filter((t) => t.status === "APPROVED");
-  const others = tuitions.filter((t) => t.status !== "APPROVED");
+  // ✅ safe computed lists
+  const approved = useMemo(
+    () => normalizeArray(tuitions).filter((t) => t?.status === "APPROVED"),
+    [tuitions]
+  );
+  const others = useMemo(
+    () => normalizeArray(tuitions).filter((t) => t?.status !== "APPROVED"),
+    [tuitions]
+  );
+
+  const allList = useMemo(() => [...approved, ...others], [approved, others]);
 
   return (
     <div className="space-y-6">
@@ -123,7 +145,9 @@ const MyTuitions = () => {
 
         <div className="card bg-base-100 border border-base-200 shadow-sm p-4">
           <p className="text-xs text-gray-500">Total posted</p>
-          <p className="text-2xl font-extrabold">{tuitions.length}</p>
+          <p className="text-2xl font-extrabold">
+            {normalizeArray(tuitions).length}
+          </p>
           <p className="text-[11px] text-gray-500">
             Approved: {approved.length} • Pending/Rejected: {others.length}
           </p>
@@ -140,7 +164,7 @@ const MyTuitions = () => {
         <div className="flex justify-center items-center min-h-[200px]">
           <span className="loading loading-spinner loading-md"></span>
         </div>
-      ) : tuitions.length === 0 ? (
+      ) : normalizeArray(tuitions).length === 0 ? (
         <div className="card bg-base-100 border border-base-200 p-6">
           <p className="text-sm text-gray-500">
             You haven’t posted any tuitions yet. Go to “Post New Tuition” to
@@ -149,31 +173,31 @@ const MyTuitions = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {[...approved, ...others].map((t) => (
+          {allList.map((t) => (
             <div
-              key={t._id}
+              key={t?._id}
               className="card bg-base-100 border border-base-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{t.title}</h3>
+                  <h3 className="font-semibold">{t?.title}</h3>
                   <span
                     className={`badge badge-sm ${
-                      t.status === "APPROVED"
+                      t?.status === "APPROVED"
                         ? "badge-success"
-                        : t.status === "REJECTED"
+                        : t?.status === "REJECTED"
                         ? "badge-error"
                         : "badge-warning"
                     }`}
                   >
-                    {t.status}
+                    {t?.status}
                   </span>
                 </div>
 
                 <p className="text-sm text-gray-500">
-                  {t.subject} • Class {t.className} • {t.location}
+                  {t?.subject} • Class {t?.className} • {t?.location}
                 </p>
-                <p className="text-sm font-semibold">Budget: {t.budget}৳</p>
+                <p className="text-sm font-semibold">Budget: {t?.budget}৳</p>
               </div>
 
               <div className="flex gap-2 md:justify-end">
@@ -185,7 +209,7 @@ const MyTuitions = () => {
                 </button>
                 <button
                   className="btn btn-sm btn-error"
-                  onClick={() => handleDelete(t._id)}
+                  onClick={() => handleDelete(t?._id)}
                 >
                   Delete
                 </button>
