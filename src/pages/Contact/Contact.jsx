@@ -27,11 +27,11 @@ const Contact = () => {
       setLoading(true);
 
       // ✅ Public contacts endpoint
-      const [tRes, sRes, aRes] = await Promise.all([
-        axiosPublic.get("/public/contacts?role=tutor"),
-        axiosPublic.get("/public/contacts?role=student"),
-        axiosPublic.get("/public/contacts?role=admin"),
-      ]);
+  const [tRes, sRes, aRes] = await Promise.all([
+    axiosPublic.get("/users/public/contacts", { params: { role: "tutor" } }),
+    axiosPublic.get("/users/public/contacts", { params: { role: "student" } }),
+    axiosPublic.get("/users/public/contacts", { params: { role: "admin" } }),
+  ]);
 
       setTutors(normalize(tRes.data));
       setStudents(normalize(sRes.data));

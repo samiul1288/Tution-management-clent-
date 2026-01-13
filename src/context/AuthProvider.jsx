@@ -28,26 +28,22 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      setLoading(true);
+ const logout = async () => {
+   setLoading(true);
+   try {
+     // ✅ firebase signOut first (auth state change triggers reliably)
+     await signOut(auth);
+   } catch (err) {
+     console.error("Logout error:", err);
+   } finally {
+     // ✅ always clear local session
+     localStorage.removeItem("access-token");
+     localStorage.removeItem("user-role");
+     setUser(null);
+     setLoading(false);
+   }
+ };
 
-      // ✅ clear local session first
-      localStorage.removeItem("access-token");
-      localStorage.removeItem("user-role");
-      setUser(null);
-
-      // ✅ firebase logout
-      await signOut(auth);
-
-      // optional (যদি backend cookie use করেন)
-      // await axiosPublic.post("/auth/logout");
-    } catch (err) {
-      console.error("Logout error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     let isMounted = true;
