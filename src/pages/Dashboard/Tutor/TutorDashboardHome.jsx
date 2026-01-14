@@ -1,166 +1,125 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useAxiosSecure from "../../../hooks/useAxiosSecure";
+import normalizeArray from "../../../utils/normalizeArray";
 
-const TutorDashboardHome = () => {
+export default function TutorDashboardHome() {
   const axiosSecure = useAxiosSecure();
-
-  const [applications, setApplications] = useState([]);
-  const [ongoing, setOngoing] = useState([]);
-  const [payments, setPayments] = useState([]);
-
+  const [applications, setApplications] = useState([]); // ✅ always array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const totalEarning = useMemo(() => {
-    return payments.reduce((sum, p) => sum + Number(p?.amount || 0), 0);
-  }, [payments]);
+  useEffect(() => {
+    let alive = true;
 
-  const fetchAll = useCallback(async () => {
-    try {
-      setError("");
-      setLoading(true);
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-      // NOTE: backend route mismatch হলে শুধু এখান থেকে endpoint change করবেন
-      const [appRes, onRes, payRes] = await Promise.allSettled([
-        axiosSecure.get("/tuitions/tutor/ongoing"),
-        axiosSecure.get("/payments/my"),
-        axiosSecure.get("/applications/my"),
-      ]);
+        // ✅ tutor route should be /applications/my (based on your backend controller)
+        const res = await axiosSecure.get("/applications/my");
+        if (!alive) return;
 
-      // ✅ Promise.allSettled ব্যবহার করায় ১টা fail হলেও অন্যগুলো show করতে পারবে
-      if (appRes.status === "fulfilled")
-        setApplications(appRes.value.data || []);
-      else console.error("applications error:", appRes.reason);
-
-      if (onRes.status === "fulfilled") setOngoing(onRes.value.data || []);
-      else console.error("ongoing error:", onRes.reason);
-
-      if (payRes.status === "fulfilled") setPayments(payRes.value.data || []);
-      else console.error("payments error:", payRes.reason);
-
-      // ✅ যদি সবগুলোই fail হয়, তখন error দেখাবো
-      const allFailed =
-        appRes.status === "rejected" &&
-        onRes.status === "rejected" &&
-        payRes.status === "rejected";
-
-      if (allFailed) {
-        const status =
-          appRes?.reason?.response?.status ||
-          onRes?.reason?.response?.status ||
-          payRes?.reason?.response?.status;
-
-        if (status === 401) setError("Unauthorized (401). Please login again.");
-        else if (status === 403)
-          setError("Forbidden (403). You don’t have access.");
-        else {
-          setError(
-            appRes?.reason?.response?.data?.message ||
-              onRes?.reason?.response?.data?.message ||
-              payRes?.reason?.response?.data?.message ||
-              "Failed to load dashboard summary."
-          );
-        }
-      }
-    } catch (err) {
-      console.error("TutorDashboardHome fetchAll error:", err);
-
-      const status = err?.response?.status;
-      if (status === 401) {
-        setError("Unauthorized (401). Please login again.");
-      } else if (status === 403) {
-        setError("Forbidden (403). Tutor only route.");
-      } else {
+        setApplications(normalizeArray(res.data));
+      } catch (err) {
+        if (!alive) return;
         setError(
           err?.response?.data?.message ||
             err?.message ||
-            "Failed to load dashboard summary."
+            "Failed to load applications."
         );
+        setApplications([]);
+      } finally {
+        alive && setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [axiosSecure]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  const approved = useMemo(
+    () => applications.filter((a) => a?.status === "APPROVED"),
+    [applications]
+  );
 
   const pending = useMemo(
-    () => applications.filter((a) => a?.status === "PENDING").length,
+    () => applications.filter((a) => a?.status === "PENDING"),
     [applications]
   );
 
-  const approved = useMemo(
-    () => applications.filter((a) => a?.status === "APPROVED").length,
-    [applications]
-  );
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold">Tutor Dashboard</h2>
-          <p className="text-sm text-gray-500">
-            Overview of your applications, ongoing tuitions and earnings.
-          </p>
-        </div>
-
-        <button className="btn btn-sm btn-outline" onClick={fetchAll}>
-          Refresh
-        </button>
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center gap-2">
+        <span className="loading loading-spinner loading-sm" />
+        <span className="text-sm opacity-70">Loading...</span>
       </div>
+    );
+  }
 
-      {error && (
+  if (error) {
+    return (
+      <div className="p-6">
         <div className="alert alert-error">
           <span className="text-sm">{error}</span>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {loading ? (
-        <div className="flex justify-center items-center min-h-200px">
-          <span className="loading loading-spinner loading-md"></span>
+  return (
+    <div className="p-6 space-y-4">
+      <h2 className="text-2xl font-bold">Tutor Dashboard</h2>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="card bg-base-100 border p-4">
+          <p className="text-sm opacity-70">Approved</p>
+          <p className="text-3xl font-extrabold">{approved.length}</p>
         </div>
-      ) : (
-        <>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="card bg-base-100 border border-base-200 shadow-sm p-5">
-              <p className="text-xs text-gray-500">Applications</p>
-              <p className="text-2xl font-extrabold">{applications.length}</p>
-              <p className="text-[11px] text-gray-500">
-                Pending: {pending} • Approved: {approved}
-              </p>
-            </div>
 
-            <div className="card bg-base-100 border border-base-200 shadow-sm p-5">
-              <p className="text-xs text-gray-500">Ongoing Tuitions</p>
-              <p className="text-2xl font-extrabold">{ongoing.length}</p>
-              <p className="text-[11px] text-gray-500">
-                Currently assigned to you
-              </p>
-            </div>
+        <div className="card bg-base-100 border p-4">
+          <p className="text-sm opacity-70">Pending</p>
+          <p className="text-3xl font-extrabold">{pending.length}</p>
+        </div>
+      </div>
 
-            <div className="card bg-base-100 border border-base-200 shadow-sm p-5">
-              <p className="text-xs text-gray-500">Total Earnings</p>
-              <p className="text-2xl font-extrabold">{totalEarning}৳</p>
-              <p className="text-[11px] text-gray-500">
-                From completed/paid tuitions
-              </p>
-            </div>
+      {/* Optional list */}
+      <div className="card bg-base-100 border p-4">
+        <p className="font-semibold mb-2">Recent Applications</p>
+        {applications.length === 0 ? (
+          <p className="text-sm opacity-70">No applications found.</p>
+        ) : (
+          <div className="space-y-2">
+            {applications.slice(0, 6).map((a) => (
+              <div
+                key={a?._id}
+                className="flex items-center justify-between border rounded-xl p-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">
+                    {a?.tuitionId?.title || "Tuition"}
+                  </p>
+                  <p className="text-xs opacity-70 truncate">
+                    Expected: {a?.expectedSalary || 0}৳ • Status: {a?.status}
+                  </p>
+                </div>
+                <span
+                  className={`badge badge-sm ${
+                    a?.status === "APPROVED"
+                      ? "badge-success"
+                      : a?.status === "REJECTED"
+                      ? "badge-error"
+                      : "badge-warning"
+                  }`}
+                >
+                  {a?.status}
+                </span>
+              </div>
+            ))}
           </div>
-
-          <div className="card bg-base-100 border border-base-200 shadow-sm p-5">
-            <h3 className="font-semibold mb-2">Recent Activity</h3>
-            <div className="text-sm text-gray-500 space-y-1">
-              <p>• Latest applications: {applications.slice(0, 3).length}</p>
-              <p>• Latest ongoing tuitions: {ongoing.slice(0, 3).length}</p>
-              <p>• Latest payments: {payments.slice(0, 3).length}</p>
-            </div>
-          </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
-};
-
-export default TutorDashboardHome;
+}

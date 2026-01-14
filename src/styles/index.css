@@ -1,5 +1,7 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @plugin "daisyui";
+
 :root{
   --primary: 16 185 129;
   --secondary: 59 130 246;
@@ -9,6 +11,7 @@
   --card: 248 250 252;
   --border: 226 232 240;
 }
+
 .dark{
   --bg: 2 6 23;
   --text: 226 232 240;
@@ -20,4 +23,3 @@ html, body {
   background: rgb(var(--bg));
   color: rgb(var(--text));
 }
-

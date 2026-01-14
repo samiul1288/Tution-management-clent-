@@ -15,7 +15,7 @@ const navLinkClass = ({ isActive }) =>
   ].join(" ");
 
 export default function Navbar() {
-  const { user, logOut } = useAuth(); // তোমার AuthProvider অনুযায়ী logOut/logout ফাংশন নাম match করো
+  const { user, logout } = useAuth(); // তোমার AuthProvider অনুযায়ী logOut/logout ফাংশন নাম match করো
   const { role } = useRole(); // expected: "ADMIN" | "MANAGER" | "USER" (বা Student/Tutor/Admin)
   const { theme, toggleTheme } = useTheme();
 
@@ -34,20 +34,22 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await logOut?.();
-    } finally {
-      setProfileOpen(false);
-      setMobileOpen(false);
-    }
-  };
+ const handleLogout = async () => {
+   try {
+     await logout?.();
+   } finally {
+     setProfileOpen(false);
+     setMobileOpen(false);
+   }
+ };
 
-  const dashboardPath = useMemo(() => {
-    // তোমার project এ dashboard route সাধারণত "/dashboard"
-    // role-based page থাকলে চাইলে switch করতে পারো
-    return "/dashboard";
-  }, []);
+const dashboardPath = useMemo(() => {
+  const r = (role || user?.role || "student").toLowerCase();
+  if (r === "admin") return "/dashboard/admin";
+  if (r === "tutor") return "/dashboard/tutor";
+  return "/dashboard/student";
+}, [role, user]);
+
 
   return (
     <header
@@ -100,12 +102,14 @@ export default function Navbar() {
                 <NavLink to={dashboardPath} className={navLinkClass}>
                   Dashboard
                 </NavLink>
-                <NavLink to="/dashboard/profile" className={navLinkClass}>
-                  Profile
-                </NavLink>
-                <NavLink to="/dashboard/payments" className={navLinkClass}>
-                  Payments
-                </NavLink>
+               <NavLink to="/dashboard/student/profile" className={navLinkClass}>
+  Profile
+</NavLink>
+
+<NavLink to="/dashboard/student/payments" className={navLinkClass}>
+  Payments
+</NavLink>
+
               </>
             ) : null}
           </div>

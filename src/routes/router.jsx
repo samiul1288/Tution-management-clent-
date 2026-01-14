@@ -13,6 +13,9 @@ import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
 import NotFound404 from "../pages/Error/NotFound404";
 import Unauthorized from "../pages/Shared/Unauthorized";
+import About from "../pages/about/About";
+
+// ✅ payment
 import Checkout from "../pages/Payment/Checkout";
 
 // dashboard pages
@@ -36,7 +39,6 @@ import ReportsAnalytics from "../pages/Dashboard/Admin/ReportsAnalytics";
 
 import ProtectedRoute from "./ProtectedRoute";
 import RoleBasedRoute from "./RoleBasedRoute";
-import About from "../pages/about/About";
 
 const AppRouter = () => {
   return (
@@ -51,7 +53,10 @@ const AppRouter = () => {
         <Route path="tutors" element={<TutorsList />} />
         <Route path="tutors/:id" element={<TutorProfile />} />
         <Route path="contact" element={<Contact />} />
+
+        {/* ✅ keep public checkout if you want (optional) */}
         <Route path="checkout" element={<Checkout />} />
+
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="unauthorized" element={<Unauthorized />} />
@@ -114,6 +119,16 @@ const AppRouter = () => {
           element={
             <RoleBasedRoute allowedRoles={["student"]}>
               <ProfileSettings />
+            </RoleBasedRoute>
+          }
+        />
+
+        {/* ✅✅ FIXED: dashboard student checkout route added */}
+        <Route
+          path="student/checkout"
+          element={
+            <RoleBasedRoute allowedRoles={["student"]}>
+              <Checkout />
             </RoleBasedRoute>
           }
         />
